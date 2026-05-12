@@ -1,0 +1,19 @@
+[project]
+name = "brick-calc"
+version = "0.1.0"
+description = "LEGO Teile Finder für SNAP, wobrick und brickwith"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "httpx>=0.27",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.3",
+    "playwright>=1.40",
+]
+
+[tool.uv]
+dev-dependencies = []

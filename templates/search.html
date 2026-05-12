@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Brick Calc – Suche läuft…{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-slate-100">
+  <div class="max-w-6xl mx-auto px-4 py-2 flex items-center gap-2 text-sm text-slate-400">
+    <a href="/" class="hover:text-brand transition-colors">Start</a>
+    <span>›</span>
+    <a href="/parts/{{ session.id }}" class="hover:text-brand transition-colors">{{ session.moc_id }}</a>
+    <span>›</span>
+    <span class="text-slate-600 font-medium">Suche</span>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto text-center">
+
+  {% if session.status == "error" %}
+  <!-- Error state -->
+  <div class="text-5xl mb-4">💥</div>
+  <h2 class="text-2xl font-bold text-slate-800 mb-2">Suche fehlgeschlagen</h2>
+  <p class="text-slate-500 mb-2">{{ session.error or "Unbekannter Fehler" }}</p>
+  <div class="flex gap-3 justify-center mt-6">
+    <a href="/parts/{{ session.id }}"
+       class="bg-brand text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-brand-light transition-colors">
+      ← Zurück zur Teileliste
+    </a>
+    <form action="/search/{{ session.id }}" method="POST">
+      <button class="bg-slate-100 text-slate-700 px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-200 transition-colors">
+        🔄 Erneut versuchen
+      </button>
+    </form>
+  </div>
+
+  {% else %}
+  <!-- Searching state -->
+  <div class="mb-8">
+    <div class="inline-flex items-center justify-center w-20 h-20 bg-brand rounded-full text-4xl mb-5 shadow-lg">
+      <svg class="w-10 h-10 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"></path>
+      </svg>
+    </div>
+    <h2 class="text-2xl font-bold text-slate-800 mb-2">Shops werden durchsucht…</h2>
+    <p class="text-slate-500">
+      {{ session.parts | length }} Teile werden in 4 Shops gesucht
+    </p>
+  </div>
+
+  <!-- Store status cards -->
+  <div class="space-y-3 text-left" id="storeCards">
+
+    {% set stores = [
+      ("SNAP",          "🔴", session.store_progress.get("SNAP", "waiting")),
+      ("wobrick",       "🟡", session.store_progress.get("wobrick", "waiting")),
+      ("brickwith",     "🟢", session.store_progress.get("brickwith", "waiting")),
+      ("MocBrickStore", "🔵", session.store_progress.get("MocBrickStore", "waiting")),
+    ] %}
+
+    {% for store_name, emoji, status in stores %}
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center justify-between"
+         id="card-{{ store_name }}">
+      <div class="flex items-center gap-3">
+        <div class="text-2xl">{{ emoji }}</div>
+        <div>
+          <div class="font-semibold text-slate-700">{{ store_name }}</div>
+          <div class="text-xs text-slate-400">{{ session.parts | length }} Teile</div>
+        </div>
+      </div>
+      <div class="status-badge" data-store="{{ store_name }}">
+        {% if status == "searching" %}
+          <span class="inline-flex items-center gap-1.5 text-sm text-blue-600 font-medium">
+            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"></path>
+            </svg>
+            Sucht…
+          </span>
+        {% elif status == "done" %}
+          <span class="inline-flex items-center gap-1.5 text-sm text-green-600 font-medium">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Fertig
+          </span>
+        {% elif status == "error" %}
+          <span class="text-sm text-red-500 font-medium">⚠ Fehler</span>
+        {% else %}
+          <span class="text-sm text-slate-400">Warten…</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+
+  </div>
+
+  <!-- Progress hint -->
+  <p class="text-xs text-slate-400 mt-6">
+    Seite aktualisiert automatisch alle 2 Sekunden
+  </p>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if session.status not in ("done", "error") %}
+<script>
+  const SESSION_ID = "{{ session.id }}";
+
+  const ICONS = {
+    searching: `<span class="inline-flex items-center gap-1.5 text-sm text-blue-600 font-medium">
+      <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"></path>
+      </svg>Sucht…</span>`,
+    done: `<span class="inline-flex items-center gap-1.5 text-sm text-green-600 font-medium">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+      </svg>Fertig</span>`,
+    error: `<span class="text-sm text-red-500 font-medium">⚠ Fehler</span>`,
+    waiting: `<span class="text-sm text-slate-400">Warten…</span>`,
+  };
+
+  function poll() {
+    fetch(`/api/status/${SESSION_ID}`)
+      .then(r => r.json())
+      .then(data => {
+        // Update store badges
+        for (const [store, status] of Object.entries(data.progress || {})) {
+          const el = document.querySelector(`[data-store="${store}"]`);
+          if (el && ICONS[status]) el.innerHTML = ICONS[status];
+        }
+
+        if (data.status === "done" || data.status === "partial") {
+          window.location.href = `/results/${SESSION_ID}`;
+          return;
+        }
+        if (data.status === "error") {
+          window.location.reload();
+          return;
+        }
+        setTimeout(poll, 2000);
+      })
+      .catch(() => setTimeout(poll, 3000));
+  }
+
+  setTimeout(poll, 1500);
+</script>
+{% endif %}
+{% endblock %}

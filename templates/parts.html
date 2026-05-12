@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Brick Calc – {{ session.moc_id }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-slate-100">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav class="flex items-center gap-2 text-sm py-3 text-slate-400">
+      <a href="/" class="hover:text-brand transition-colors font-medium">Start</a>
+      <svg class="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      <span class="text-slate-700 font-semibold">{{ session.moc_id }}</span>
+    </nav>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="flex flex-wrap items-start justify-between gap-4 mb-8 animate-slide-up">
+  <div>
+    <div class="inline-flex items-center gap-2 text-xs font-semibold text-brand bg-brand/5 px-2.5 py-1 rounded-full border border-brand/10 mb-2">
+      <span class="w-1.5 h-1.5 rounded-full bg-brand"></span>MOC / Set
+    </div>
+    <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">{{ session.moc_id }}</h2>
+    <p class="text-slate-400 text-sm mt-0.5">Importiert von Rebrickable</p>
+  </div>
+  <a href="/" class="text-sm text-slate-400 hover:text-brand transition-colors font-medium flex items-center gap-1 group">
+    <svg class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    Neuer Import
+  </a>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8 animate-slide-up" style="animation-delay: 0.05s">
+  <div class="bg-white rounded-xl border border-slate-200/60 p-5 shadow-sm card-hover">
+    <div class="text-2xl font-extrabold text-brand">{{ session.parts | length }}</div>
+    <div class="text-xs text-slate-400 font-medium mt-1 uppercase tracking-wider">Verschiedene Teile</div>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200/60 p-5 shadow-sm card-hover">
+    <div class="text-2xl font-extrabold text-brand">{{ session.parts | sum(attribute='quantity') }}</div>
+    <div class="text-xs text-slate-400 font-medium mt-1 uppercase tracking-wider">Teile gesamt</div>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200/60 p-5 shadow-sm card-hover">
+    <div class="text-2xl font-extrabold text-brand">{{ session.parts | map(attribute='color') | map(attribute='name') | list | unique | list | length }}</div>
+    <div class="text-xs text-slate-400 font-medium mt-1 uppercase tracking-wider">Farben</div>
+  </div>
+  <div class="bg-white rounded-xl border border-slate-200/60 p-5 shadow-sm card-hover">
+    <div class="text-2xl font-extrabold text-brand">4</div>
+    <div class="text-xs text-slate-400 font-medium mt-1 uppercase tracking-wider">Shops</div>
+  </div>
+</div>
+
+<!-- Parts Table -->
+<div class="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden mb-8 animate-slide-up" style="animation-delay: 0.1s">
+  <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+    <h3 class="font-bold text-slate-700 text-sm uppercase tracking-wider">Teileliste</h3>
+    <span class="text-[11px] text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full font-semibold">{{ session.parts | length }} Positionen</span>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-slate-50/50 text-[11px] text-slate-400 uppercase tracking-wider border-b border-slate-100">
+          <th class="px-5 py-3 text-left w-16 font-semibold">Bild</th>
+          <th class="px-5 py-3 text-left font-semibold">Bezeichnung</th>
+          <th class="px-5 py-3 text-left font-semibold hidden sm:table-cell">Teil-Nr.</th>
+          <th class="px-5 py-3 text-left font-semibold hidden md:table-cell">Farbe</th>
+          <th class="px-5 py-3 text-right font-semibold">Anzahl</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for part in session.parts | sort(attribute='name') %}
+        <tr class="hover:bg-slate-50/80 transition-colors group">
+          <td class="px-5 py-3">
+            {% if part.img_url %}
+            <div class="w-12 h-12 bg-slate-50 rounded-lg flex items-center justify-center p-1 group-hover:bg-white group-hover:shadow-sm transition-all">
+              <img src="{{ part.img_url }}" alt="{{ part.name }}"
+                   class="w-full h-full object-contain rounded" loading="lazy"
+                   data-fallback="{{ part | fallback_img }}"
+                   onerror="
+                     var fb = this.dataset.fallback;
+                     if (fb && this.src !== fb) { this.classList.add('opacity-40', 'grayscale'); this.dataset.fallback = ''; this.src = fb; } else { this.outerHTML='<div class=\'text-slate-300 text-lg\'>🧱</div>'; }" />
+            </div>
+            {% else %}
+            <div class="w-12 h-12 bg-slate-50 rounded-lg flex items-center justify-center text-slate-300 text-lg">🧱</div>
+            {% endif %}
+          </td>
+          <td class="px-5 py-3">
+            <div class="font-semibold text-slate-700 text-sm">{{ part.name }}</div>
+            {% if part.element_id %}
+            <div class="text-[11px] text-slate-400 mt-0.5 font-mono">Element: {{ part.element_id }}</div>
+            {% endif %}
+          </td>
+          <td class="px-5 py-3 hidden sm:table-cell">
+            <code class="text-xs bg-slate-100 px-2 py-1 rounded-lg text-slate-500 font-mono font-medium">{{ part.part_num }}</code>
+          </td>
+          <td class="px-5 py-3 hidden md:table-cell">
+            <div class="flex items-center gap-2">
+              <div class="w-5 h-5 rounded-full border border-slate-200 shadow-sm flex-shrink-0" style="background-color: #{{ part.color.rgb }}"></div>
+              <span class="text-slate-500 text-xs font-medium">{{ part.color.name }}</span>
+            </div>
+          </td>
+          <td class="px-5 py-3 text-right">
+            <span class="inline-flex items-center justify-center bg-slate-100 text-slate-700 font-bold text-xs px-3 py-1.5 rounded-full">{{ part.quantity }}x</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Settings + Search -->
+<form action="/search/{{ session.id }}" method="POST" class="animate-slide-up" style="animation-delay: 0.15s">
+  <div class="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden mb-5">
+    <div class="px-6 py-4 border-b border-slate-100">
+      <h3 class="font-bold text-slate-700 text-sm uppercase tracking-wider flex items-center gap-2">
+        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        Sucheinstellungen
+      </h3>
+    </div>
+    <div class="px-6 py-5 space-y-4">
+      <label class="flex items-start gap-4 cursor-pointer group">
+        <div class="relative mt-0.5 flex-shrink-0">
+          <input type="checkbox" name="wobrick_shipping_threshold" value="true"
+                 {% if session.wobrick_shipping_threshold %}checked{% endif %}
+                 class="peer sr-only" />
+          <div class="w-5 h-5 bg-slate-100 rounded-md border border-slate-300 peer-checked:bg-brand peer-checked:border-brand transition-all flex items-center justify-center">
+            <svg class="w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+          </div>
+        </div>
+        <div>
+          <div class="text-sm font-semibold text-slate-700 group-hover:text-brand transition-colors">wobrick: Versandkostenfreigrenze einbeziehen</div>
+          <div class="text-xs text-slate-400 mt-0.5">Ab $20 Bestellwert bietet wobrick kostenlosen Versand ($3 Ersparnis)</div>
+        </div>
+      </label>
+
+      <div class="border-t border-slate-100 pt-4">
+        <div class="flex items-start gap-4">
+          <div class="w-5 h-5 mt-0.5 flex-shrink-0 flex items-center justify-center text-slate-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+          </div>
+          <div class="flex-1">
+            <div class="text-sm font-semibold text-slate-700 mb-1.5">BrickOwl API-Key <span class="text-slate-400 font-normal">(optional)</span></div>
+            <input type="text" name="brickowl_api_key"
+                   value="{{ session.brickowl_api_key }}"
+                   placeholder="Dein BrickOwl API-Key …"
+                    class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-slate-600 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all font-mono" />
+            <div class="text-xs text-slate-400 mt-1.5">Leer lassen um BrickOwl zu überspringen. Versandkosten variieren je nach Seller.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex justify-end">
+    <button type="submit" id="searchBtn"
+            class="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white font-bold py-4 px-8 rounded-xl transition-all flex items-center gap-3 text-base shadow-lg shadow-amber-200 hover:shadow-xl hover:shadow-amber-300 active:scale-[0.98]">
+      <span id="searchBtnText">In Shops suchen</span>
+      <svg id="searchBtnArrow" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+      <svg id="searchBtnSpinner" class="hidden w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="white" stroke-width="4"/>
+        <path class="opacity-75" fill="white" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/>
+      </svg>
+    </button>
+  </div>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelector('form[action^="/search/"]').addEventListener('submit', function() {
+    document.getElementById('searchBtnText').textContent = 'Wird gesucht…';
+    document.getElementById('searchBtnArrow').classList.add('hidden');
+    document.getElementById('searchBtnSpinner').classList.remove('hidden');
+    document.getElementById('searchBtn').disabled = true;
+    document.getElementById('searchBtn').classList.add('opacity-75');
+  });
+</script>
+{% endblock %}

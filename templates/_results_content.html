@@ -1,0 +1,256 @@
+<!-- Summaries + store orders, eingebunden als Partial in results.html -->
+{% if result.orders %}
+
+<div class="bg-gradient-to-r from-brand to-brand-dark rounded-2xl text-white p-6 mb-6 shadow-lg">
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+    <div>
+      <div class="text-3xl font-bold">€{{ result.total_cost | euro }}</div>
+      <div class="text-blue-200 text-xs mt-1">Gesamtkosten</div>
+    </div>
+    <div class="border-l border-blue-500">
+      <div class="text-3xl font-bold">{{ result.orders | length }}</div>
+      <div class="text-blue-200 text-xs mt-1">Shops</div>
+    </div>
+    <div class="border-l border-blue-500">
+      <div class="text-3xl font-bold">{{ result.total_parts_found }}</div>
+      <div class="text-blue-200 text-xs mt-1">Teile gefunden</div>
+    </div>
+    <div class="border-l border-blue-500">
+      <div class="text-3xl font-bold">{{ result.unavailable | length }}</div>
+      <div class="text-blue-200 text-xs mt-1">Nicht verfügbar</div>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+{% if not result.orders and session.status != "partial" %}
+
+<div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center mb-6">
+  <div class="text-5xl mb-4">🔧</div>
+  <h3 class="text-lg font-semibold text-slate-700 mb-2">Keine Teile gefunden</h3>
+  <p class="text-slate-500 text-sm max-w-md mx-auto">
+    Die Shop-Scraper müssen noch konfiguriert werden.<br>
+    Öffne <code class="bg-slate-100 px-1 rounded">scrapers.py</code> und trage die
+    CSS-Selektoren für jeden Shop ein – die Anleitung steht direkt im Code.
+  </p>
+</div>
+
+{% endif %}
+
+{% if result.unavailable %}
+<div class="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6">
+  <div class="flex items-center justify-between gap-2 mb-3">
+    <div class="flex items-center gap-2">
+      <span class="text-lg">⚠️</span>
+      <span class="font-semibold text-amber-800">
+        {{ result.unavailable | length }} Teil{% if result.unavailable | length != 1 %}e{% endif %} nicht verfügbar
+      </span>
+    </div>
+    <a href="/download-missing-csv/{{ session.id }}{% if show_alts %}?alts=1{% endif %}"
+       class="text-xs border border-amber-300 text-amber-700 hover:bg-amber-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 flex-shrink-0">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+      </svg>
+      CSV
+    </a>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    {% for part in result.unavailable %}
+    <div class="bg-amber-100 text-amber-700 text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5">
+      <div class="w-3 h-3 rounded-full border border-amber-300 flex-shrink-0"
+           style="background-color: #{{ part.color.rgb }}"></div>
+      <span>{{ part.part_num }}</span>
+      <span class="text-amber-500">{{ part.color.name }}</span>
+      <span class="font-bold">×{{ part.quantity }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% for order in result.orders %}
+<div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-4 store-order"
+     data-store="{{ order.store_name }}">
+
+  <div class="px-5 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-brand rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm">
+        {{ order.store_name[0].upper() }}
+      </div>
+      <div>
+        <div class="font-bold text-slate-800">{{ order.store_name }}</div>
+        <div class="text-xs text-slate-400 flex items-center gap-1.5 flex-wrap">
+          <span>{{ order.lines | length }} Position{% if order.lines | length != 1 %}en{% endif %}</span>
+          {% if order.store_url %}
+          <span>·</span>
+          <a href="{{ order.store_url }}" target="_blank" class="text-brand hover:underline">Shop öffnen ↗</a>
+          {% endif %}
+          {% if order.original_currency != "EUR" %}
+          <span>·</span>
+          <span class="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded text-xs font-medium">
+            {{ order.original_currency }} → EUR @ {{ order.usd_to_eur | euro3 }}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="/download-csv/{{ session.id }}/{{ order.store_name }}{% if show_alts %}?alts=1{% endif %}"
+         class="text-xs border border-slate-200 text-slate-500 hover:text-brand hover:border-brand px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        CSV
+      </a>
+      <div class="text-right">
+      <div class="text-xl font-bold text-slate-800">€{{ order.grand_total | euro }}</div>
+      <div class="text-xs text-slate-400 mt-0.5">
+        €{{ order.parts_total | euro }} Teile
+        {% if order.shipping_cost > 0 %}
+        + €{{ order.shipping_cost | euro }} Versand
+        {% else %}
+        + <span class="text-green-600 font-medium">Gratis-Versand</span>
+        {% endif %}
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-xs text-slate-400 uppercase tracking-wide border-b border-slate-50">
+          <th class="px-4 py-2 text-left w-12">Bild</th>
+          <th class="px-4 py-2 text-left">Teil</th>
+          <th class="px-4 py-2 text-left hidden sm:table-cell">Farbe</th>
+          <th class="px-4 py-2 text-right">€/Stk</th>
+          <th class="px-4 py-2 text-right">Anz.</th>
+          <th class="px-4 py-2 text-right">Gesamt</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for line in order.lines | sort(attribute='line_total', reverse=True) %}
+        <tr class="hover:bg-slate-50 transition-colors{% if line.is_alternative %} bg-amber-50/40{% endif %}">
+          <td class="px-4 py-2">
+            {% if line.part.img_url %}
+            <img src="{{ line.part.img_url }}" alt="{{ line.part.name }}"
+                 class="w-10 h-10 object-contain rounded" loading="lazy"
+                 data-fallback="{{ line.part | fallback_img }}"
+                 onerror="
+                   var fb = this.dataset.fallback;
+                   if (fb && this.src !== fb) {
+                     this.classList.add('opacity-40', 'grayscale');
+                     this.dataset.fallback = '';
+                     this.src = fb;
+                   } else {
+                     this.outerHTML='<div class=\'w-10 h-10 bg-slate-100 rounded flex items-center justify-center text-slate-300\'>🧱</div>';
+                   }" />
+            {% else %}
+            <div class="w-10 h-10 bg-slate-100 rounded flex items-center justify-center text-slate-300">🧱</div>
+            {% endif %}
+          </td>
+          <td class="px-4 py-2.5">
+            <div class="font-medium text-slate-700 text-xs leading-snug">{{ line.part.name }}</div>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <code class="text-slate-400 text-xs">{{ line.part.part_num }}</code>
+              {% if line.is_alternative %}
+              <span class="relative group/alt">
+                <span class="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium cursor-default">Ersatz</span>
+                <div class="absolute left-0 top-full mt-1 z-10 hidden group-hover/alt:block
+                            bg-white border border-amber-200 rounded-xl shadow-lg p-3 min-w-max text-left text-xs">
+                  <div class="font-semibold text-amber-700 mb-1.5">SNAP liefert stattdessen:</div>
+                  <div class="flex flex-col gap-1 text-slate-600">
+                    {% if line.alt_part_num and line.alt_part_num != line.part.part_num %}
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-slate-400">Teil:</span>
+                      <code class="text-slate-500">{{ line.part.part_num }}</code>
+                      <span class="text-slate-400">→</span>
+                      <code class="text-amber-700 font-semibold">{{ line.alt_part_num }}</code>
+                      <span class="text-slate-400 italic">(ohne Druck)</span>
+                    </div>
+                    {% endif %}
+                    {% if line.alt_color_id and line.alt_color_id != line.part.color.id %}
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-slate-400">Farbe:</span>
+                      <div class="flex items-center gap-1">
+                        <div class="w-3 h-3 rounded-full border border-slate-200 flex-shrink-0"
+                             style="background-color: #{{ line.part.color.rgb }}"></div>
+                        <span>{{ line.part.color.name }}</span>
+                      </div>
+                      <span class="text-slate-400">→</span>
+                      <div class="flex items-center gap-1">
+                        <div class="w-3 h-3 rounded-full border border-slate-200 flex-shrink-0"
+                             style="background-color: #{{ line.alt_color_rgb or 'e2e8f0' }}"></div>
+                        <span class="font-semibold text-amber-700">{{ line.alt_color_name or line.alt_color_id }}</span>
+                      </div>
+                    </div>
+                    {% endif %}
+                    {% if not (line.alt_part_num and line.alt_part_num != line.part.part_num)
+                          and not (line.alt_color_id and line.alt_color_id != line.part.color.id) %}
+                    <span class="text-slate-400 italic">Details nicht verfügbar</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </span>
+              {% endif %}
+            </div>
+          </td>
+          <td class="px-4 py-2.5 hidden sm:table-cell">
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 rounded-full border border-slate-200 flex-shrink-0"
+                   style="background-color: #{{ line.part.color.rgb }}"></div>
+              <span class="text-slate-400 text-xs">{{ line.part.color.name }}</span>
+            </div>
+          </td>
+          <td class="px-4 py-2.5 text-right text-slate-500 text-xs relative group/price">
+            €{{ line.unit_price | euro3 }}
+            {% if line.alternatives %}
+            <div class="absolute right-0 top-full mt-1 z-10 hidden group-hover/price:block
+                        bg-white border border-slate-200 rounded-xl shadow-lg p-3 min-w-max text-left">
+              <div class="text-xs font-semibold text-slate-500 mb-2">Andere Shops</div>
+              {% for alt in line.alternatives | sort(attribute='unit_price') %}
+              <div class="flex items-center justify-between gap-4 text-xs py-0.5">
+                <span class="text-slate-500">{{ alt.store_name }}</span>
+                <span class="font-mono {% if alt.unit_price < line.unit_price %}text-green-600 font-semibold{% elif alt.unit_price > line.unit_price %}text-red-400{% else %}text-slate-400{% endif %}">
+                  €{{ alt.unit_price | euro3 }}
+                </span>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </td>
+          <td class="px-4 py-2.5 text-right">
+            <span class="font-semibold text-slate-600 text-xs">{{ line.quantity }}×</span>
+          </td>
+          <td class="px-4 py-2.5 text-right font-bold text-slate-700 text-xs">€{{ line.line_total | euro }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="bg-slate-50 border-t border-slate-100 text-sm">
+          <td colspan="5" class="px-4 py-3 text-right text-slate-400 text-xs">
+            Teile: €{{ order.parts_total | euro }}
+            {% if order.shipping_cost > 0 %}
+            + Versand: €{{ order.shipping_cost | euro }}
+            {% else %}
+            + <span class="text-green-600">Gratis-Versand</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-right font-bold text-slate-800">€{{ order.grand_total | euro }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+</div>
+{% endfor %}
+
+{% if result.orders %}
+<div class="bg-brand rounded-2xl p-5 flex items-center justify-between text-white shadow-lg mt-2">
+  <div class="font-semibold">Gesamtbetrag ({{ result.orders | length }} Shop{% if result.orders | length != 1 %}s{% endif %})</div>
+  <div class="text-2xl font-bold">€{{ result.total_cost | euro }}</div>
+</div>
+{% endif %}

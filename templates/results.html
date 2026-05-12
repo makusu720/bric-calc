@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Brick Calc – Ergebnisse {{ session.moc_id }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="bg-white border-b border-slate-100">
+  <div class="max-w-6xl mx-auto px-4 py-2 flex items-center gap-2 text-sm text-slate-400">
+    <a href="/" class="hover:text-brand transition-colors">Start</a>
+    <span>›</span>
+    <a href="/parts/{{ session.id }}" class="hover:text-brand transition-colors">{{ session.moc_id }}</a>
+    <span>›</span>
+    <span class="text-slate-600 font-medium">Ergebnisse</span>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="flex flex-wrap items-start justify-between gap-4 mb-6">
+  <div>
+    <h2 class="text-2xl font-bold text-slate-800">Optimaler Einkaufsplan</h2>
+    <p class="text-slate-500 text-sm">{{ session.moc_id }}</p>
+  </div>
+  <div class="flex items-center gap-3">
+    {% if session.status == "partial" %}
+    <div id="liveBadge" class="text-xs bg-green-50 text-green-700 border border-green-200 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+      <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+      Live
+    </div>
+    {% endif %}
+    <form action="/search/{{ session.id }}" method="POST">
+      <button class="text-sm border border-slate-200 text-slate-500 hover:text-brand hover:border-brand px-4 py-2 rounded-xl transition-colors">
+        🔄 Nochmal suchen
+      </button>
+    </form>
+  </div>
+</div>
+
+{% if session.status == "partial" %}
+<div id="shopProgress" class="flex gap-2 mb-5 flex-wrap"></div>
+{% endif %}
+
+<div id="resultsContent">
+  {% include "_results_content.html" %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{% if session.status == "partial" %}
+<script>
+  const SESSION_ID = "{{ session.id }}";
+  const SHOW_ALTS = {% if show_alts %}true{% else %}false{% endif %};
+  let currentVersion = {{ session.result_version }};
+
+  const STORE_LABELS = ["SNAP", "wobrick", "brickwith", "MocBrickStore", "BrickOwl"];
+
+  function renderProgress(progress) {
+    const container = document.getElementById('shopProgress');
+    if (!container) return;
+    container.innerHTML = '';
+    for (const store of STORE_LABELS) {
+      const state = progress[store] || '';
+      let bg, border, text, icon;
+      if (state === 'done') {
+        bg = 'bg-green-50'; border = 'border-green-200'; text = 'text-green-700'; icon = '✓';
+      } else if (state === 'searching') {
+        bg = 'bg-blue-50'; border = 'border-blue-200'; text = 'text-blue-700'; icon = '<span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse inline-block align-middle -mt-px"></span>';
+      } else {
+        bg = 'bg-slate-50'; border = 'border-slate-200'; text = 'text-slate-400'; icon = '⋯';
+      }
+      container.insertAdjacentHTML('beforeend',
+        `<div class="text-xs ${bg} ${text} border ${border} px-2.5 py-1 rounded-full flex items-center gap-1.5">
+          ${icon} ${store}
+        </div>`
+      );
+    }
+  }
+
+  renderProgress({{ session.store_progress | tojson }});
+
+  function poll() {
+    fetch(`/api/status/${SESSION_ID}`)
+      .then(r => r.json())
+      .then(data => {
+        renderProgress(data.progress || {});
+
+        if (data.result_version !== undefined && data.result_version > currentVersion) {
+          currentVersion = data.result_version;
+
+          const oldNames = new Set();
+          document.querySelectorAll('.store-order').forEach(el => oldNames.add(el.dataset.store));
+
+          fetch(`/api/results-fragment/${SESSION_ID}?alts=${SHOW_ALTS ? "1" : "0"}`)
+            .then(r => r.text())
+            .then(html => {
+              const container = document.getElementById('resultsContent');
+              container.innerHTML = html;
+
+              container.querySelectorAll('.store-order').forEach(el => {
+                if (!oldNames.has(el.dataset.store)) {
+                  el.style.opacity = '0';
+                  el.style.transform = 'translateY(20px)';
+                  el.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
+                  requestAnimationFrame(() => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                  });
+                }
+              });
+            });
+        }
+
+        if (data.status === "done") {
+          const badge = document.getElementById('liveBadge');
+          const progress = document.getElementById('shopProgress');
+          if (badge) {
+            badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-500"></span> Abgeschlossen';
+            badge.classList.remove('bg-green-50', 'text-green-700', 'border-green-200');
+            badge.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200');
+          }
+          if (progress) {
+            progress.style.transition = 'opacity 0.5s ease-out';
+            progress.style.opacity = '0';
+            setTimeout(() => progress.remove(), 600);
+          }
+          return;
+        }
+        setTimeout(poll, 2000);
+      })
+      .catch(() => setTimeout(poll, 3000));
+  }
+
+  setTimeout(poll, 2000);
+</script>
+{% endif %}
+{% endblock %}
